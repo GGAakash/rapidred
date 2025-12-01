@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Request Blood - RapidRed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: white;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        h2 {
+            text-align: center;
+            color: #e53935;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #333;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px 10px;
+            margin-top: 4px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        button {
+            margin-top: 18px;
+            width: 100%;
+            padding: 10px;
+            border-radius: 25px;
+            border: none;
+            background: #1976d2;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0d47a1;
+        }
+        .loc-btn {
+            margin-top: 10px;
+            background: #43a047;
+        }
+        .loc-btn:hover {
+            background: #2e7d32;
+        }
+        .error-msg {
+            color: #c62828;
+            background: #ffebee;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            text-decoration: none;
+            color: #1976d2;
+            font-size: 13px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition, showError);
+        } else {
+            alert("Your browser does not support location access.");
+        }
+    }
+
+    function showPosition(position) {
+        document.getElementById("latitude").value = position.coords.latitude;
+        document.getElementById("longitude").value = position.coords.longitude;
+    }
+
+    function showError() {
+        alert("Please allow location permission to auto-fill coordinates.");
+    }
+    </script>
+</head>
+<body>
+
+<div class="container">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" 
+         alt="RapidRed Logo" width="80" style="display:block;margin:0 auto 8px auto;">
+    <h2>Request Blood</h2>
+    <div class="subtitle">Enter emergency details and RapidRed will find the nearest compatible donors.</div>
+
+    {% if error %}
+      <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+        <label>Patient Name</label>
+        <input name="patient_name" required>
+
+        <label>Required Blood Group</label>
+        <select name="required_blood_group" required>
+            <option value="">-- Select Blood Group --</option>
+            <option value="O+">O+</option>
+            <option value="O-">O-</option>
+            <option value="A+">A+</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B-">B-</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB-</option>
+        </select>
+
+        <label>Latitude</label>
+        <input id="latitude" name="latitude" required>
+
+        <label>Longitude</label>
+        <input id="longitude" name="longitude" required>
+
+        <button type="button" class="loc-btn" onclick="getLocation()">📍 Use Current Location</button>
+
+        <button type="submit">Find Donors</button>
+    </form>
+
+    <a href="/" class="back-link">⬅ Back to Home</a>
+</div>
+
+</body>
+</html>

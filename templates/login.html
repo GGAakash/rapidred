@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - RapidRed</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f7fb; margin:0; padding:0; }
+        .container {
+            max-width: 400px; margin: 60px auto; background:white;
+            padding: 20px 25px; border-radius:10px;
+            box-shadow:0 4px 15px rgba(0,0,0,0.08);
+        }
+        h2 { text-align:center; color:#e53935; margin-bottom:5px; }
+        label { display:block; margin-top:10px; }
+        input {
+            width:100%; padding:8px; margin-top:4px;
+            border-radius:6px; border:1px solid #ccc;
+        }
+        button {
+            margin-top:18px; width:100%; padding:10px;
+            border-radius:25px; border:none;
+            background:#1976d2; color:white;
+            font-weight:bold; cursor:pointer;
+        }
+        .error { color:#c62828; background:#ffebee; padding:8px; border-radius:6px; font-size:13px; }
+        .back { text-align:center; margin-top:12px; }
+        .back a { color:#1976d2; text-decoration:none; font-size:13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Login</h2>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="POST">
+        <label>Username</label>
+        <input name="username" required>
+        <label>Password</label>
+        <input type="password" name="password" required>
+        <button type="submit">Sign In</button>
+    </form>
+    <div class="back">
+        <a href="/">⬅ Back to Home</a>
+    </div>
+</div>
+</body>
+</html>
