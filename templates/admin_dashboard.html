@@ -1,80 +1,48 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Admin Dashboard - RapidRed</title>
-    <style>
-        body { font-family: Arial, sans-serif; background:#f5f7fb; margin:0; padding:0; }
-        .container {
-            max-width: 900px; margin: 30px auto; background:white;
-            padding: 25px 30px; border-radius:10px;
-            box-shadow:0 4px 15px rgba(0,0,0,0.08);
-        }
-        h2 { color:#e53935; margin-bottom:10px; }
-        .cards { display:flex; gap:15px; margin:15px 0 20px 0; }
-        .card {
-            flex:1; background:#fafafa; padding:12px 15px;
-            border-radius:8px; border:1px solid #e0e0e0;
-            text-align:center;
-        }
-        .card h3 { margin:0; font-size:14px; color:#555; }
-        .card p { margin:4px 0 0; font-size:20px; font-weight:bold; color:#1976d2; }
-        table { width:100%; border-collapse:collapse; margin-top:15px; }
-        th, td { border:1px solid #ddd; padding:8px; font-size:13px; }
-        th { background:#f2f2f2; }
-        .top-links { display:flex; justify-content:space-between; margin-bottom:10px; }
-        a.link { text-decoration:none; color:#1976d2; font-size:13px; }
-        a.link:hover { text-decoration:underline; }
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="top-links">
-        <a href="/" class="link">⬅ Home</a>
-        <a href="/logout" class="link">Logout</a>
-    </div>
-    <h2>Admin Dashboard</h2>
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
 
-    <div class="cards">
-        <div class="card">
-            <h3>Total Donors</h3>
-            <p>{{ total_donors }}</p>
-        </div>
-        <div class="card">
-            <h3>Total Requests</h3>
-            <p>{{ total_requests }}</p>
-        </div>
-        <div class="card">
-            <h3>Open Requests</h3>
-            <p>{{ open_requests }}</p>
+{% block content %}
+<div class="card p-4">
+
+<h2 class="text-danger">Admin Dashboard</h2>
+
+<div class="row mt-3">
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <h5>Total Donors</h5>
+            <h2 class="text-primary">{{ total_donors }}</h2>
         </div>
     </div>
-
-    <h3>Recent Requests</h3>
-    {% if recent_requests|length == 0 %}
-        <p>No requests yet.</p>
-    {% else %}
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Patient</th>
-                <th>Blood Group</th>
-                <th>Created At</th>
-                <th>Status</th>
-            </tr>
-            {% for r in recent_requests %}
-            <tr>
-                <td>{{ r.id }}</td>
-                <td>{{ r.patient_name }}</td>
-                <td>{{ r.required_blood_group }}</td>
-                <td>{{ r.created_at }}</td>
-                <td>{{ r.status }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-    {% endif %}
-
-    <br>
-    <a href="/donors" class="link">📋 View All Donors</a>
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <h5>Total Requests</h5>
+            <h2 class="text-primary">{{ total_requests }}</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 text-center">
+            <h5>Open Requests</h5>
+            <h2 class="text-primary">{{ open_requests }}</h2>
+        </div>
+    </div>
 </div>
-</body>
-</html>
+
+<h4 class="mt-4">Recent Requests</h4>
+
+<table class="table table-bordered">
+    <tr><th>ID</th><th>Patient</th><th>Blood</th><th>Created</th><th>Status</th></tr>
+    {% for r in recent_requests %}
+    <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.patient_name }}</td>
+        <td>{{ r.required_blood_group }}</td>
+        <td>{{ r.created_at }}</td>
+        <td>{{ r.status }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<a href="/admin/map" class="btn btn-secondary mt-3">📍 Open Real-time Donor Map</a>
+
+</div>
+{% endblock %}

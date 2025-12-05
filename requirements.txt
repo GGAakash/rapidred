@@ -1,4 +1,7 @@
-Flask
-Flask-SQLAlchemy
-Werkzeug
-gunicorn
+Flask==2.3.2
+Flask-SQLAlchemy==3.0.5
+Flask-SocketIO==5.3.5
+python-socketio==5.9.0
+eventlet==0.33.3
+gunicorn==21.2.0
+twilio==8.9.0

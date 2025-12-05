@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Share Live Location - RapidRed</title>
+  <style>
+    body{font-family:Arial, sans-serif;background:#f5f7fb;margin:0}
+    .cont{max-width:600px;margin:40px auto;background:white;padding:20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.06)}
+    button{padding:10px 16px;border-radius:8px;border:none;background:#1976d2;color:white;font-weight:bold}
+  </style>
+</head>
+<body>
+<div class="cont">
+  <h3>Share Live Location</h3>
+  <p>Allow the browser to send your live location every 10 seconds while this page is open.</p>
+  <input id="phone" placeholder="Enter your phone (registered)" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc">
+  <div style="margin-top:12px">
+    <button id="start">Start Sharing</button>
+    <button id="stop" style="background:#c62828;margin-left:8px">Stop</button>
+  </div>
+  <p style="margin-top:12px"><a href="/">⬅ Back to Home</a></p>
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  let watchId = null;
+  const phoneInput = document.getElementById('phone');
+
+  document.getElementById('start').onclick = () => {
+    const phone = phoneInput.value.trim();
+    if (!phone) return alert('Enter your phone.');
+    if (!navigator.geolocation) return alert('Geolocation not supported.');
+    function sendPos(pos) {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      socket.emit('donor_location_update', { phone: phone, lat: lat, lon: lon });
+    }
+    watchId = navigator.geolocation.watchPosition(sendPos, (err)=>{console.warn(err)}, {enableHighAccuracy:true, maximumAge:5000, timeout:10000});
+    alert('Started sharing. Keep this page open.');
+  };
+
+  document.getElementById('stop').onclick = () => {
+    const phone = phoneInput.value.trim();
+    if (watchId) navigator.geolocation.clearWatch(watchId);
+    socket.emit('donor_stop_sharing', { phone: phone });
+    alert('Stopped sharing.');
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Manage Donors{% endblock %}
+
+{% block content %}
+<div class="card p-4">
+
+<h3 class="text-danger">Registered Donors</h3>
+
+<table class="table table-bordered mt-3">
+    <tr>
+        <th>ID</th><th>Name</th><th>Blood</th><th>Phone</th><th>Lat</th><th>Lon</th><th>Action</th>
+    </tr>
+
+    {% for d in donors %}
+    <tr>
+        <td>{{ d.id }}</td>
+        <td>{{ d.name }}</td>
+        <td>{{ d.blood_group }}</td>
+        <td>{{ d.phone }}</td>
+        <td>{{ "%.4f"|format(d.latitude) }}</td>
+        <td>{{ "%.4f"|format(d.longitude) }}</td>
+        <td><a class="btn btn-danger btn-sm" href="/delete_donor/{{ d.id }}">Delete</a></td>
+    </tr>
+    {% endfor %}
+</table>
+
+</div>
+{% endblock %}

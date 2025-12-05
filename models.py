@@ -20,6 +20,8 @@ class Donor(db.Model):
     longitude = db.Column(db.Float, nullable=False)
     last_donation_date = db.Column(db.Date, nullable=True)
     is_available = db.Column(db.Boolean, default=True)
+    last_seen = db.Column(db.DateTime, nullable=True)
+    is_online = db.Column(db.Boolean, default=False)
 
 class BloodRequest(db.Model):
     __tablename__ = "blood_request"

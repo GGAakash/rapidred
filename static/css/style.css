@@ -1,0 +1,13 @@
+/* static/css/style.css */
+body { font-family: Arial, sans-serif; background:#f5f7fb; margin:0; padding:20px; }
+.container { max-width:900px; margin:20px auto; text-align:center; }
+.card { background:white; padding:20px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); margin-bottom:20px; }
+h1,h2 { color:#d32f2f; margin:6px 0; }
+.btn-row .btn, .btn { display:inline-block; margin:8px; padding:10px 14px; background:#1976d2; color:white; border-radius:6px; text-decoration:none; }
+input, select { width:100%; padding:8px; margin:6px 0 12px 0; border-radius:6px; border:1px solid #ccc; }
+table { width:100%; border-collapse:collapse; margin-top:10px; }
+table th, table td { border:1px solid #eee; padding:8px; text-align:left; }
+.error { color:#b71c1c; background:#ffebee; padding:8px; border-radius:6px; }
+.stats { display:flex; gap:10px; }
+.stats .box { flex:1; background:#fafafa; padding:12px; border-radius:6px; text-align:center; }
+.del { color:#b71c1c; text-decoration:none; padding:6px; border-radius:4px; background:#fff0f0; }

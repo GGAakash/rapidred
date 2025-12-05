@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Real-time Donor Map - RapidRed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    body{font-family:Arial, sans-serif;margin:0}
+    #map{height:80vh;width:100%}
+    .topbar{padding:10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.06);display:flex;justify-content:space-between;align-items:center}
+    .cont{max-width:1100px;margin:0 auto}
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div><a href="/admin/dashboard">⬅ Dashboard</a></div>
+  <div><strong>Real-time Donor Map</strong></div>
+  <div><a href="/logout">Logout</a></div>
+</div>
+<div class="cont">
+  <div id="map"></div>
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  const socket = io();
+
+  const map = L.map('map').setView([13.0, 80.0], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  const donorMarkers = {};
+
+  function addOrUpdateDonor(d) {
+      const id = d.id;
+      const lat = d.latitude;
+      const lon = d.longitude;
+      const label = `${d.name} (${d.blood_group})`;
+      if (donorMarkers[id]) {
+          donorMarkers[id].setLatLng([lat, lon]);
+          donorMarkers[id].bindPopup(label);
+      } else {
+          const marker = L.marker([lat, lon]).addTo(map);
+          marker.bindPopup(label);
+          donorMarkers[id] = marker;
+      }
+  }
+
+  // initial load
+  fetch('/api/all_donors').then(r=>r.json()).then(list=>{
+      if(list.length>0) map.setView([list[0].latitude, list[0].longitude], 12);
+      list.forEach(d=>addOrUpdateDonor(d));
+  });
+
+  socket.on('donor_updated', function(d) {
+      addOrUpdateDonor(d);
+  });
+
+  socket.on('donor_offline', function(d) {
+      if (donorMarkers[d.id]) donorMarkers[d.id].setOpacity(0.4);
+  });
+</script>
+</body>
+</html>

@@ -1,90 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>RapidRed - Home</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f7fb;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 900px;
-            margin: 60px auto;
-            background: white;
-            padding: 30px 35px;
-            border-radius: 12px;
-            box-shadow: 0 4px 18px rgba(0,0,0,0.08);
-            text-align: center;
-        }
-        h1 {
-            color: #e53935;
-            margin-bottom: 10px;
-        }
-        p.desc {
-            color: #555;
-            font-size: 15px;
-            margin-bottom: 25px;
-        }
-        .btn-row {
-            margin-top: 15px;
-        }
-        .btn {
-            display: inline-block;
-            padding: 12px 22px;
-            margin: 8px;
-            border-radius: 25px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 14px;
-            border: none;
-        }
-        .btn-primary {
-            background: #1976d2;
-            color: white;
-        }
-        .btn-secondary {
-            background: #43a047;
-            color: white;
-        }
-        .btn-outline {
-            background: white;
-            color: #1976d2;
-            border: 1px solid #1976d2;
-        }
-        .footer {
-            margin-top: 25px;
-            font-size: 13px;
-            color: #777;
-        }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}RapidRed - Home{% endblock %}
 
-<div class="container">
-    <img src="{{ url_for('static', filename='E:\RapidRed_Project\static\css\js\images\logo.png') }}" 
-     alt="RapidRed Logo" width="110" style="margin-bottom: 10px;">
+{% block content %}
+<div class="card p-4 text-center">
 
-    <h1>RapidRed</h1>
-    <p class="desc">
-        An AI and geolocation-based emergency blood donor matching system.<br>
-        Quickly connect patients with the nearest compatible and reliable donors.
-    </p>
+    <img src="{{ url_for('static', filename='images/logo.png') }}" width="110" class="mb-3">
 
-    <div class="btn-row">
-        <a href="/register_donor" class="btn btn-primary">🩸 Register as Donor</a>
-        <a href="/request_blood" class="btn btn-secondary">🚑 Request Blood</a>
+    <h1 class="text-danger fw-bold">RapidRed</h1>
+    <p class="text-secondary">AI & Real-Time Geolocation Based Blood Donor Finder</p>
+
+    <div class="mt-3">
+        <a class="btn btn-success me-2" href="{{ url_for('register_donor') }}">🩸 Register as Donor</a>
+        <a class="btn btn-primary me-2" href="{{ url_for('login') }}">🔐 Login (Admin/Hospital)</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('admin_map') }}">📍 View Real-Time Map</a>
     </div>
 
-    <div class="btn-row">
-        <a href="/request_blood" class="btn btn-outline">📍 Try Emergency Matching Demo</a>
-    </div>
-
-    <div class="footer">
-        Developed by G.G.Aakash & Bala Krishnan.J • RapidRed Project
-    </div>
 </div>
-
-</body>
-</html>
+{% endblock %}

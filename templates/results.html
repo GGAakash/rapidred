@@ -1,165 +1,28 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>RapidRed - Matching Donors</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f7fb;
-            margin: 0;
-            padding: 0;
-        }
-        .container {
-            max-width: 900px;
-            margin: 40px auto;
-            background: white;
-            padding: 25px 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        }
-        h2 {
-            text-align: center;
-            color: #e53935;
-            margin-bottom: 10px;
-        }
-        h4 {
-            text-align: center;
-            color: #555;
-            margin-top: 0;
-        }
-        .no-results {
-            text-align: center;
-            color: #c62828;
-            font-weight: bold;
-            padding: 20px;
-            background: #ffebee;
-            border-radius: 8px;
-        }
-        .donor-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px 18px;
-            margin-bottom: 12px;
-            background: #fafafa;
-            transition: 0.2s ease-in-out;
-        }
-        .donor-card:hover {
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            background: #ffffff;
-        }
-        .donor-left {
-            flex: 2;
-        }
-        .donor-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 0 0 5px 0;
-            color: #1e88e5;
-        }
-        .donor-details {
-            margin: 0;
-            font-size: 14px;
-            color: #555;
-        }
-        .highlight {
-            font-weight: bold;
-            color: #d32f2f;
-        }
-        .donor-right {
-            flex: 1;
-            text-align: right;
-        }
-        .distance-badge {
-            display: inline-block;
-            padding: 6px 10px;
-            border-radius: 20px;
-            font-size: 13px;
-            background: #e3f2fd;
-            color: #1565c0;
-            margin-bottom: 6px;
-        }
-        .btn {
-            display: inline-block;
-            padding: 6px 12px;
-            font-size: 13px;
-            border-radius: 20px;
-            text-decoration: none;
-            margin-left: 5px;
-        }
-        .btn-call {
-            background: #43a047;
-            color: white;
-        }
-        .btn-map {
-            background: #1976d2;
-            color: white;
-        }
-        .info-row {
-            margin-top: 15px;
-            text-align: right;
-            font-size: 14px;
-            color: #555;
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 20px;
-            text-decoration: none;
-            color: #1976d2;
-            font-weight: bold;
-        }
-        .back-link:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Matching Results{% endblock %}
 
-<div class="container">
-    <img src="{{ url_for('static', filename='images/logo.png') }}" 
-         alt="RapidRed Logo" width="70" style="display:block;margin:0 auto 6px auto;">
-    <h2>Best Matching Donors</h2>
-    <h4>Prioritized based on compatibility, distance and availability</h4>
+{% block content %}
+<div class="card p-4">
+
+    <h3 class="text-danger">Matching Donors</h3>
 
     {% if donors|length == 0 %}
-        <div class="no-results">
-            No suitable donors were found for this blood group and location.<br>
-            Please try again later or expand the search range.
-        </div>
+      <p>No donors found.</p>
     {% else %}
-
+    <table class="table table-bordered mt-3">
+        <tr>
+            <th>Name</th><th>Blood Group</th><th>Distance (km)</th><th>Phone</th>
+        </tr>
         {% for donor, dist, score in donors %}
-        <div class="donor-card">
-            <div class="donor-left">
-                <p class="donor-name">{{ donor.name }}</p>
-                <p class="donor-details">
-                    Blood Group: <span class="highlight">{{ donor.blood_group }}</span><br>
-                    Phone: <a href="tel:{{ donor.phone }}">{{ donor.phone }}</a><br>
-                    Availability: {{ 'Available' if donor.is_available else 'Not Available' }}
-                </p>
-            </div>
-            <div class="donor-right">
-                <div class="distance-badge">
-                    Distance: {{ "%.2f"|format(dist) }} km
-                </div><br>
-                <a class="btn btn-call" href="tel:{{ donor.phone }}">📞 Call Donor</a>
-                <a class="btn btn-map" href="https://www.google.com/maps/search/?api=1&query={{ donor.latitude }},{{ donor.longitude }}" target="_blank">
-                    📍 View on Map
-                </a>
-            </div>
-        </div>
+        <tr>
+            <td>{{ donor.name }}</td>
+            <td>{{ donor.blood_group }}</td>
+            <td>{{ "%.2f"|format(dist) }}</td>
+            <td>{{ donor.phone }}</td>
+        </tr>
         {% endfor %}
-
-        <div class="info-row">
-            <b>Total Matches Found:</b> {{ donors|length }}
-        </div>
-
+    </table>
     {% endif %}
 
-    <a href="/" class="back-link">⬅ Back to Home</a>
 </div>
-
-</body>
-</html>
+{% endblock %}
