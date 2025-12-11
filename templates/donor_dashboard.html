@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Donor Dashboard{% endblock %}
+{% block content %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h5>Your profile</h5>
+      <p><strong>{{ donor.name }}</strong> • {{ donor.blood_group }}</p>
+      <p>Phone: {{ donor.phone }}</p>
+      <p>Status: {{ 'Online' if donor.is_online else 'Offline' }} • Last seen: {{ donor.last_seen }}</p>
+      <a class="btn btn-outline-danger" href="{{ url_for('donor_share_page') }}">Share Live Location</a>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h5>Open Requests Nearby</h5>
+      <div id="nearRequests">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // optional: request recent open requests and show basic info
+  fetch('/api/all_donors').then(r=>r.json()).then(()=>{ /* placeholder */ }).catch(()=>{});
+</script>
+{% endblock %}

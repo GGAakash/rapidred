@@ -11,3 +11,37 @@ table th, table td { border:1px solid #eee; padding:8px; text-align:left; }
 .stats { display:flex; gap:10px; }
 .stats .box { flex:1; background:#fafafa; padding:12px; border-radius:6px; text-align:center; }
 .del { color:#b71c1c; text-decoration:none; padding:6px; border-radius:4px; background:#fff0f0; }
+/* add to static/css/style.css or inside <head> in base.html */
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-brand img.logo {
+  height: 46px;      /* adjust for preferred size */
+  width: auto;
+  object-fit: contain;
+  margin-right: 8px;
+}
+
+.nav-left, .nav-right {
+  display:flex;
+  align-items:center;
+}
+
+/* optional: make the topbar sticky and tidy */
+.topbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding: 8px 14px;
+  border-bottom: 1px solid #eee;
+  background: #fff;
+}
+
+/* small responsive tweak */
+@media (max-width: 768px){
+  .header-brand img.logo { height:40px; }
+  .topbar { padding:8px; }
+}

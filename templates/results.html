@@ -1,28 +1,35 @@
 {% extends "base.html" %}
-{% block title %}Matching Results{% endblock %}
-
+{% block title %}Results{% endblock %}
 {% block content %}
-<div class="card p-4">
-
-    <h3 class="text-danger">Matching Donors</h3>
-
-    {% if donors|length == 0 %}
-      <p>No donors found.</p>
-    {% else %}
-    <table class="table table-bordered mt-3">
-        <tr>
-            <th>Name</th><th>Blood Group</th><th>Distance (km)</th><th>Phone</th>
-        </tr>
-        {% for donor, dist, score in donors %}
-        <tr>
-            <td>{{ donor.name }}</td>
-            <td>{{ donor.blood_group }}</td>
-            <td>{{ "%.2f"|format(dist) }}</td>
-            <td>{{ donor.phone }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% endif %}
-
+<div class="card p-3">
+  <h4>Notified Donors</h4>
+  {% if notified %}
+    <ul class="list-group mb-3">
+      {% for n in notified %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div><strong>{{ n.name }}</strong> • {{ n.phone }}</div>
+          <div><small>dist {{ n.distance_km }} km</small> <span class="badge bg-success ms-2">{{ 'SMS' if n.sms_sent else 'No SMS' }}</span></div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="alert alert-info">No notifications sent.</div>
+  {% endif %}
+  <h5>Other Matches (map below)</h5>
+  <div id="map"></div>
 </div>
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    var map = L.map('map').setView([13.02,80.12], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    var matches = {{ matches|tojson | safe }};
+    matches.forEach(function(m){
+      if(m.latitude && m.longitude){
+        L.marker([m.latitude, m.longitude]).addTo(map).bindPopup('<b>'+m.name+'</b><br/>'+m.blood_group);
+      }
+    });
+  </script>
+{% endblock %}
 {% endblock %}

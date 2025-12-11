@@ -1,50 +1,40 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Share Live Location - RapidRed</title>
-  <style>
-    body{font-family:Arial, sans-serif;background:#f5f7fb;margin:0}
-    .cont{max-width:600px;margin:40px auto;background:white;padding:20px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.06)}
-    button{padding:10px 16px;border-radius:8px;border:none;background:#1976d2;color:white;font-weight:bold}
-  </style>
-</head>
-<body>
-<div class="cont">
-  <h3>Share Live Location</h3>
-  <p>Allow the browser to send your live location every 10 seconds while this page is open.</p>
-  <input id="phone" placeholder="Enter your phone (registered)" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc">
-  <div style="margin-top:12px">
-    <button id="start">Start Sharing</button>
-    <button id="stop" style="background:#c62828;margin-left:8px">Stop</button>
+{% extends "base.html" %}
+{% block title %}Share Location{% endblock %}
+{% block content %}
+<div class="card p-3">
+  <h4>Share Live Location</h4>
+  <p>Press Start and allow the browser to send periodic location updates. These will be visible to hospitals when you accept a request.</p>
+  <div class="d-flex gap-2">
+    <button id="startBtn" class="btn btn-danger">Start Sharing</button>
+    <button id="stopBtn" class="btn btn-secondary">Stop</button>
   </div>
-  <p style="margin-top:12px"><a href="/">⬅ Back to Home</a></p>
+  <div class="mt-3">
+    <div id="status" class="small-muted">Not sharing</div>
+    <div id="coords" class="small-muted"></div>
+  </div>
 </div>
 
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
   const socket = io();
+  const donorId = {{ donor.id }};
   let watchId = null;
-  const phoneInput = document.getElementById('phone');
-
-  document.getElementById('start').onclick = () => {
-    const phone = phoneInput.value.trim();
-    if (!phone) return alert('Enter your phone.');
-    if (!navigator.geolocation) return alert('Geolocation not supported.');
-    function sendPos(pos) {
-      const lat = pos.coords.latitude;
-      const lon = pos.coords.longitude;
-      socket.emit('donor_location_update', { phone: phone, lat: lat, lon: lon });
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    if(!navigator.geolocation){ alert("No geolocation"); return; }
+    socket.emit('join_room', {room:'donors'});
+    function sendPos(p){
+      const lat = p.coords.latitude;
+      const lon = p.coords.longitude;
+      document.getElementById('status').innerText = 'Sharing...';
+      document.getElementById('coords').innerText = lat.toFixed(5)+', '+lon.toFixed(5);
+      socket.emit('donor_share', {donor_id: donorId, latitude: lat, longitude: lon});
     }
-    watchId = navigator.geolocation.watchPosition(sendPos, (err)=>{console.warn(err)}, {enableHighAccuracy:true, maximumAge:5000, timeout:10000});
-    alert('Started sharing. Keep this page open.');
-  };
-
-  document.getElementById('stop').onclick = () => {
-    const phone = phoneInput.value.trim();
-    if (watchId) navigator.geolocation.clearWatch(watchId);
-    socket.emit('donor_stop_sharing', { phone: phone });
-    alert('Stopped sharing.');
-  };
+    navigator.geolocation.getCurrentPosition(sendPos, (e)=>alert(e.message), {enableHighAccuracy:true});
+    watchId = navigator.geolocation.watchPosition(sendPos, (e)=>console.warn(e), {enableHighAccuracy:true, maximumAge:5000, timeout:10000});
+  });
+  document.getElementById('stopBtn').addEventListener('click', ()=>{
+    if(watchId) navigator.geolocation.clearWatch(watchId);
+    socket.emit('donor_offline', {donor_id: donorId});
+    document.getElementById('status').innerText = 'Stopped';
+  });
 </script>
-</body>
-</html>
+{% endblock %}

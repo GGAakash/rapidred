@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Edit Donor{% endblock %}
+{% block content %}
+<h3>Edit Donor</h3>
+<form method="post" enctype="multipart/form-data">
+  <div class="mb-2"><label class="form-label">Name</label><input name="name" class="form-control" value="{{ donor.name }}"></div>
+  <div class="mb-2"><label class="form-label">Blood Group</label><input name="blood_group" class="form-control" value="{{ donor.blood_group }}"></div>
+  <div class="mb-2"><label class="form-label">Phone</label><input name="phone" class="form-control" value="{{ donor.phone }}"></div>
+  <div class="row g-2"><div class="col"><label class="form-label">Latitude</label><input name="latitude" class="form-control" value="{{ donor.latitude }}"></div><div class="col"><label class="form-label">Longitude</label><input name="longitude" class="form-control" value="{{ donor.longitude }}"></div></div>
+  <div class="mb-2"><label class="form-label">DOB</label><input name="dob" type="date" class="form-control" value="{{ donor.dob }}"></div>
+  <div class="mb-2"><label class="form-label">Weight (kg)</label><input name="weight_kg" class="form-control" value="{{ donor.weight_kg }}"></div>
+  <div class="form-check"><input class="form-check-input" type="checkbox" name="health_clearance" value="yes" {% if donor.health_clearance %}checked{% endif %}><label class="form-check-label">Health clearance</label></div>
+  <div class="form-check"><input class="form-check-input" type="checkbox" name="consent" value="yes" {% if donor.consent %}checked{% endif %}><label class="form-check-label">Consent</label></div>
+  <div class="mt-2"><button class="btn btn-primary">Save</button></div>
+</form>
+{% endblock %}

@@ -1,19 +1,13 @@
 {% extends "base.html" %}
-{% block title %}RapidRed - Home{% endblock %}
-
+{% block title %}Home - RapidRed{% endblock %}
 {% block content %}
-<div class="card p-4 text-center">
-
-    <img src="{{ url_for('static', filename='images/logo.png') }}" width="110" class="mb-3">
-
-    <h1 class="text-danger fw-bold">RapidRed</h1>
-    <p class="text-secondary">AI & Real-Time Geolocation Based Blood Donor Finder</p>
-
-    <div class="mt-3">
-        <a class="btn btn-success me-2" href="{{ url_for('register_donor') }}">🩸 Register as Donor</a>
-        <a class="btn btn-primary me-2" href="{{ url_for('login') }}">🔐 Login (Admin/Hospital)</a>
-        <a class="btn btn-outline-secondary" href="{{ url_for('admin_map') }}">📍 View Real-Time Map</a>
-    </div>
-
+<div class="py-4 text-center">
+  <h1>RapidRed</h1>
+  <p class="lead">AI-assisted, geolocation-aware emergency donor matching.</p>
+  <div class="d-flex justify-content-center gap-2">
+    <a class="btn btn-danger" href="{{ url_for('register_donor') }}">Register as Donor</a>
+    <a class="btn btn-outline-light" href="{{ url_for('login') }}">Hospital/Admin Login</a>
+  </div>
+  <div class="mt-4 text-muted small">Tip: Hospital users can create requests. Donors can register and share live location.</div>
 </div>
 {% endblock %}

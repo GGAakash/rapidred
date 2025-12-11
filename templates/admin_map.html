@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Real-time Map{% endblock %}
+{% block content %}
+<div class="card p-3">
+  <h4>Real-time donor map</h4>
+  <div id="map"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+  var map = L.map('map').setView([13.02,80.12], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  var socket = io();
+  socket.on('donor_updated', function(p){
+    if(p.latitude && p.longitude){
+      L.circleMarker([p.latitude, p.longitude], {radius:6, color:'#b00'}).addTo(map).bindPopup(p.name + ' • ' + p.blood_group);
+    }
+  });
+  // request initial snapshot
+  socket.emit('request_donor_snapshot');
+  socket.on('donor_snapshot', function(arr){
+    arr.forEach(function(d){
+      if(d.latitude && d.longitude){
+        L.marker([d.latitude, d.longitude]).addTo(map).bindPopup(d.name + ' • ' + d.blood_group);
+      }
+    });
+  });
+</script>
+{% endblock %}

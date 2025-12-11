@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Donor Login{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card p-3">
+      <h4>Donor Login</h4>
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <form method="post">
+        <div class="mb-2"><label class="form-label">Phone</label><input name="phone" class="form-control" required></div>
+        <div class="mb-2"><label class="form-label">Password</label><input name="password" class="form-control" type="password" required></div>
+        <div class="d-grid"><button class="btn btn-danger">Login</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

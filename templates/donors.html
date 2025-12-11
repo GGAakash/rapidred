@@ -1,28 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Manage Donors{% endblock %}
-
+{% block title %}Donors{% endblock %}
 {% block content %}
-<div class="card p-4">
-
-<h3 class="text-danger">Registered Donors</h3>
-
-<table class="table table-bordered mt-3">
-    <tr>
-        <th>ID</th><th>Name</th><th>Blood</th><th>Phone</th><th>Lat</th><th>Lon</th><th>Action</th>
-    </tr>
-
-    {% for d in donors %}
-    <tr>
-        <td>{{ d.id }}</td>
-        <td>{{ d.name }}</td>
-        <td>{{ d.blood_group }}</td>
-        <td>{{ d.phone }}</td>
-        <td>{{ "%.4f"|format(d.latitude) }}</td>
-        <td>{{ "%.4f"|format(d.longitude) }}</td>
-        <td><a class="btn btn-danger btn-sm" href="/delete_donor/{{ d.id }}">Delete</a></td>
-    </tr>
-    {% endfor %}
-</table>
-
+<div class="card p-3">
+  <h4>Donors</h4>
+  <table class="table">
+    <thead><tr><th>Name</th><th>Blood</th><th>Phone</th><th>Location</th></tr></thead>
+    <tbody>
+      {% for d in donors %}
+        <tr>
+          <td>{{ d.name }}</td>
+          <td>{{ d.blood_group }}</td>
+          <td>{{ d.phone }}</td>
+          <td>
+            {% if d.latitude and d.longitude %}
+              {{ "%.5f"|format(d.latitude) }}, {{ "%.5f"|format(d.longitude) }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

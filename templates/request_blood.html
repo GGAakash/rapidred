@@ -1,49 +1,73 @@
 {% extends "base.html" %}
 {% block title %}Request Blood{% endblock %}
-
 {% block content %}
-<div class="card p-4 mx-auto" style="max-width:600px">
+<div class="row">
+  <div class="col-md-7">
+    <div class="card p-3">
+      <h4>Request Blood</h4>
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <form method="post" id="reqForm">
+        <div class="mb-2"><label class="form-label">Patient Name</label><input name="patient_name" class="form-control"></div>
+        <div class="mb-2"><label class="form-label">Required Blood Group</label>
+          <select name="required_blood_group" class="form-control">
+            <option>O+</option><option>O-</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option>
+          </select>
+        </div>
+        <div class="row g-2">
+          <div class="col"><label class="form-label">Latitude</label><input id="latitude" name="latitude" class="form-control"></div>
+          <div class="col"><label class="form-label">Longitude</label><input id="longitude" name="longitude" class="form-control"></div>
+        </div>
+        <div class="mt-2 d-flex gap-2">
+          <button type="button" id="useLoc" class="btn btn-outline-secondary">Use Current Location</button>
+          <button class="btn btn-danger" type="submit">Find Donors</button>
+        </div>
+      </form>
 
-    <h3 class="text-danger text-center">Request Blood</h3>
+      <div class="mt-3">
+        <h5>Matches</h5>
+        <div id="map" class="mb-2"></div>
+        <div id="matchList">
+          <!-- server will render matches after POST -->
+        </div>
+      </div>
+    </div>
+  </div>
 
-    {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
-
-    <form method="POST">
-        <label>Patient Name</label>
-        <input class="form-control" name="patient_name" required>
-
-        <label class="mt-2">Required Blood Group</label>
-        <select class="form-control" name="required_blood_group" required>
-            <option>O+</option><option>O-</option><option>A+</option><option>A-</option>
-            <option>B+</option><option>B-</option><option>AB+</option><option>AB-</option>
-        </select>
-
-        <label class="mt-2">Latitude</label>
-        <input class="form-control" name="latitude" id="latitude" required>
-
-        <label class="mt-2">Longitude</label>
-        <input class="form-control" name="longitude" id="longitude" required>
-
-        <button type="button" onclick="getLoc()" class="btn btn-success w-100 mt-3">📍 Use Current Location</button>
-
-        <button class="btn btn-primary w-100 mt-3">Find Donors</button>
-    </form>
-
+  <div class="col-md-5">
+    <div class="card p-3">
+      <h5>Quick Actions</h5>
+      <a href="{{ url_for('hospital_requests') }}" class="btn btn-outline-primary btn-sm mb-2">My Requests</a>
+      <a href="{{ url_for('donors_list') }}" class="btn btn-outline-secondary btn-sm mb-2">View Donors</a>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+    </div>
+  </div>
 </div>
 
-{% block scripts %}
-<script>
-function getLoc(){
-    navigator.geolocation.getCurrentPosition(
-        pos => {
-            document.getElementById("latitude").value = pos.coords.latitude;
-            document.getElementById("longitude").value = pos.coords.longitude;
-        },
-        err => alert("Please enable location")
-    );
-}
-</script>
 {% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    var map = L.map('map').setView([13.02,80.12], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    document.getElementById('useLoc').addEventListener('click', function(){
+      if(!navigator.geolocation){ alert('No geolocation'); return; }
+      navigator.geolocation.getCurrentPosition(function(p){
+        document.getElementById('latitude').value = p.coords.latitude.toFixed(6);
+        document.getElementById('longitude').value = p.coords.longitude.toFixed(6);
+        map.setView([p.coords.latitude, p.coords.longitude], 13);
+        L.marker([p.coords.latitude, p.coords.longitude]).addTo(map).bindPopup('Request location').openPopup();
+      }, function(e){ alert(e.message); }, {enableHighAccuracy:true});
+    });
+
+    // when server returns matches it will render list and we leave socket listening
+    var socket = io();
+    socket.on('donor_updated', function(payload){
+      // simple: add a circle marker for live updates
+      if(payload.latitude && payload.longitude){
+        L.circleMarker([payload.latitude, payload.longitude], {radius:6, color:'#b00'}).addTo(map).bindPopup(payload.name);
+      }
+    });
+  </script>
 {% endblock %}
