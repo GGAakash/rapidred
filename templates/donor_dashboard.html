@@ -2,76 +2,42 @@
 {% block title %}Donor Dashboard{% endblock %}
 
 {% block content %}
-<div class="card p-3">
-  <h4>Welcome, {{ donor.name }}</h4>
-  <div>
-    <strong>Blood group:</strong> {{ donor.blood_group }}<br>
-    <strong>Residential area:</strong> {{ donor.residential_area or '-' }}<br>
-    <strong>Status:</strong> 
-    <span id="online-badge" class="badge bg-success" style="display: none">Online</span>
+<div class="card p-3 bg-dark text-light">
+  <div class="d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">Welcome, {{ donor.name }}</h4>
+    <div>
+      <strong>Blood:</strong> {{ donor.blood_group }} &nbsp;
+      <strong>Area:</strong> {{ donor.residential_area or '-' }} &nbsp;
+      <span id="online-badge" class="badge bg-success" style="display:none">Online</span>
+    </div>
   </div>
 
-  <!-- =============================== -->
-  <!-- NEW SECTION: Available Requests -->
-  <!-- =============================== -->
+  <!-- Available Requests -->
   <div class="mt-4">
-    <h6>Available Requests Near You</h6>
-
-    {% if available_requests and available_requests|length > 0 %}
-      <div class="list-group">
-        {% for r in available_requests %}
-          <div class="list-group-item d-flex justify-content-between align-items-start bg-dark text-light">
-
-            <div>
-              <strong>Request #{{ r.id }}</strong> — {{ r.patient_name }} ({{ r.blood_group }})<br>
-              <small>{{ r.distance_msg }}</small><br>
-              <small class="text-muted">Created: {{ r.created_at }}</small>
-            </div>
-
-            <div class="d-flex flex-column align-items-end">
-
-              <!-- Accept Button -->
-              <form method="post" 
-                    action="{{ url_for('accept_request', request_id=r.id) }}"
-                    style="margin-bottom:6px;">
-                <button class="btn btn-success btn-sm" type="submit">ACCEPT</button>
-              </form>
-
-              <!-- Directions Button -->
-              <a class="btn btn-outline-light btn-sm"
-                 target="_blank"
-                 href="https://www.google.com/maps/dir/?api=1&destination={{ r.latitude }},{{ r.longitude }}">
-                Directions
-              </a>
-
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-
-    {% else %}
-      <div class="text-muted small">No nearby open requests yet.</div>
-    {% endif %}
+    <h6>Available Requests Near You <small id="avail-refresh" class="text-muted">(updates every 12s)</small></h6>
+    <div id="available-requests" class="list-group"></div>
+    <div id="no-available" class="text-muted small" style="display:none">No nearby open requests yet.</div>
   </div>
-  <!-- =============================== -->
 
+  <!-- Assigned Requests -->
   <div class="mt-4">
     <h6>Assigned Requests</h6>
     <div id="assigned-requests">
       {% if assigned_requests %}
         {% for ar in assigned_requests %}
-          <div class="card p-2 mb-2 bg-dark text-light">
-            <b>Request #{{ ar.id }} — {{ ar.patient_name }}</b><br>
-            Blood: {{ ar.required_blood_group }} • 
-            Status: <span class="badge bg-warning">{{ ar.status }}</span><br>
-
-            Location: {{ ar.latitude }}, {{ ar.longitude }}
-            <div class="mt-2">
-              <a class="btn btn-sm btn-outline-light"
-                 href="https://www.google.com/maps/dir/?api=1&destination={{ ar.latitude }},{{ ar.longitude }}"
-                 target="_blank">
-                Start Directions
-              </a>
+          <div class="card p-2 mb-2 bg-secondary text-light">
+            <div class="d-flex justify-content-between">
+              <div>
+                <b>Request #{{ ar.id }} — {{ ar.patient_name }}</b><br>
+                Blood: {{ ar.required_blood_group }} • Status: <span class="badge bg-warning">{{ ar.status }}</span><br>
+                Location: <span class="small">{{ ar.latitude }}, {{ ar.longitude }}</span>
+              </div>
+              <div class="text-end">
+                <a class="btn btn-sm btn-outline-light mb-1"
+                   href="https://www.google.com/maps/dir/?api=1&destination={{ ar.latitude }},{{ ar.longitude }}"
+                   target="_blank">Directions</a>
+                <!-- Donor reached / complete buttons are hospital-side, donor sees only status -->
+              </div>
             </div>
           </div>
         {% endfor %}
@@ -81,6 +47,7 @@
     </div>
   </div>
 
+  <!-- Notifications -->
   <div class="mt-4">
     <h6>Your Notifications</h6>
     <div id="my-notifs">
@@ -96,24 +63,49 @@
     </div>
   </div>
 </div>
+
+<!-- hidden audio for urgent notification -->
+<audio id="urgent-sound" preload="auto">
+  <source src="{{ url_for('static', filename='sounds/alert_short.mp3') }}" type="audio/mpeg">
+</audio>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-
 <script>
+  // utils: haversine for client-side live distance
+  function haversine(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+    function toRad(x){return x*Math.PI/180;}
+    var R = 6371; // km
+    var dLat = toRad(lat2-lat1);
+    var dLon = toRad(lon2-lon1);
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+            Math.cos(toRad(lat1))*Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2)*Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
   var socket = io();
   var donor_id = {{ donor.id }};
   socket.emit('join', {donor_id: donor_id});
 
+  var knownRequestIds = new Set(); // to detect newly arriving requests
+  var lastGeo = {latitude: null, longitude: null};
+
+  // share location to server and update lastGeo
   function shareLocation(){
     if(!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(function(pos){
       var lat = pos.coords.latitude;
       var lon = pos.coords.longitude;
-
+      lastGeo.latitude = lat;
+      lastGeo.longitude = lon;
       document.getElementById('online-badge').style.display = 'inline-block';
       socket.emit('donor_share', {donor_id: donor_id, latitude: lat, longitude: lon});
+      // update displayed distances immediately
+      updateDisplayedDistances();
     }, function(err){
       console.error('location fail', err);
     }, {enableHighAccuracy:true});
@@ -122,15 +114,132 @@
   shareLocation();
   setInterval(shareLocation, 12000);
 
+  // fetch available requests and render
+  async function fetchAvailable(){
+    try {
+      const res = await fetch('/api/available_requests');
+      if(!res.ok) throw new Error('fetch failed');
+      const arr = await res.json();
+      renderAvailable(arr);
+    } catch(e){
+      console.error('available fetch error', e);
+    }
+  }
+
+  function renderAvailable(list){
+    var container = document.getElementById('available-requests');
+    container.innerHTML = '';
+    if(!list || list.length === 0){
+      document.getElementById('no-available').style.display = 'block';
+      return;
+    } else {
+      document.getElementById('no-available').style.display = 'none';
+    }
+
+    var urgentSound = document.getElementById('urgent-sound');
+
+    list.forEach(function(r){
+      // compute distance use lastGeo if available, else use server distance
+      var displayDistance = r.distance_km;
+      if(lastGeo.latitude !== null && r.latitude !== null){
+        var d = haversine(lastGeo.latitude, lastGeo.longitude, r.latitude, r.longitude);
+        if(d !== null) displayDistance = d.toFixed(3);
+      }
+
+      // create item
+      var item = document.createElement('div');
+      item.className = 'list-group-item d-flex justify-content-between align-items-start mb-2';
+      item.style.background = '#2b2b2b';
+      item.style.color = 'white';
+      item.dataset.reqid = r.id;
+
+      // if very near (<=0.5km) highlight red/urgent
+      var isUrgent = (r.distance_km !== null && r.distance_km <= 0.5) || (displayDistance !== null && parseFloat(displayDistance) <= 0.5);
+      if(isUrgent){
+        item.style.border = '2px solid #ff4d4f';
+        item.style.background = '#3a1f1f';
+      }
+
+      item.innerHTML = `
+        <div>
+          <strong>Req #${r.id}</strong> — ${r.patient_name} (${r.blood_group})<br>
+          <small class="text-muted">Distance: <span class="req-distance">${displayDistance === null ? 'N/A' : displayDistance + ' km'}</span></small><br>
+          <small class="text-muted">Created: ${r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</small>
+        </div>
+        <div class="d-flex flex-column align-items-end">
+          <form method="post" action="/accept_request/${r.id}" style="margin-bottom:6px;">
+            <button class="btn btn-success btn-sm" type="submit">ACCEPT</button>
+          </form>
+          <a class="btn btn-outline-light btn-sm" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=${r.latitude},${r.longitude}">Directions</a>
+        </div>
+      `;
+      container.appendChild(item);
+
+      // if this request id is new -> play sound for urgent
+      if(!knownRequestIds.has(r.id)){
+        knownRequestIds.add(r.id);
+        if(isUrgent){
+          try { urgentSound.play(); } catch(e){ console.warn('sound play fail', e); }
+          // also show a small toast
+          if(window.alert) {
+            // a lightweight visual alert for new urgent
+            console.log('New urgent request', r.id);
+          }
+        }
+      }
+    });
+  }
+
+  // update all visible distances using lastGeo
+  function updateDisplayedDistances(){
+    var rows = document.querySelectorAll('#available-requests [data-reqid]');
+    rows.forEach(function(row){
+      var latLonText = row.querySelector('a[href*="maps"]')?.getAttribute('href');
+      if(!latLonText) return;
+      // extract coordinates from maps URL (destination=lat,lon)
+      var m = latLonText.match(/destination=([0-9\.\-]+),([0-9\.\-]+)/);
+      if(!m) return;
+      var lat = parseFloat(m[1]), lon = parseFloat(m[2]);
+      if(lastGeo.latitude === null) return;
+      var d = haversine(lastGeo.latitude, lastGeo.longitude, lat, lon);
+      if(d !== null){
+        var el = row.querySelector('.req-distance');
+        if(el) el.textContent = d.toFixed(3) + ' km';
+        // if close, highlight
+        if(d <= 0.5) {
+          row.style.border = '2px solid #ff4d4f';
+          row.style.background = '#3a1f1f';
+        }
+      }
+    });
+  }
+
+  // auto refresh every 12s
+  fetchAvailable();
+  setInterval(fetchAvailable, 12000);
+  setInterval(updateDisplayedDistances, 8000);
+
+  // socket listeners add more notifications in realtime
   socket.on('nearby_request', function(data){
+    // prepend to notifications and refetch available requests quickly
     var el = document.getElementById('my-notifs');
     el.innerHTML = '<div>' + (data.message || '') + '</div>' + el.innerHTML;
+    fetchAvailable();
   });
 
   socket.on('request_notification', function(data){
     var el = document.getElementById('my-notifs');
     el.innerHTML = '<div>' + (data.message || '') + '</div>' + el.innerHTML;
+    fetchAvailable();
   });
-</script>
 
+  socket.on('request_created', function(){
+    fetchAvailable();
+  });
+
+  socket.on('request_updated', function(){
+    fetchAvailable();
+  });
+
+</script>
 {% endblock %}

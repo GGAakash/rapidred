@@ -297,49 +297,66 @@ def register_hospital():
     return render_template("register_hospital.html", error=None, form={})
 
 
+# --- Replace existing donor_dashboard() with this updated version ---
 @app.route("/donor/dashboard")
 @donor_login_required
 def donor_dashboard():
     d = Donor.query.get(session["donor_id"])
-    notifications = Notification.query.filter_by(donor_id=d.id).order_by(Notification.created_at.desc()).limit(20).all()
+    notifications = Notification.query.filter_by(donor_id=d.id).order_by(Notification.created_at.desc()).limit(50).all()
     assigned = BloodRequest.query.filter_by(accepted_donor_id=d.id).order_by(BloodRequest.created_at.desc()).all()
 
-    # NEW: gather nearby / open requests that this donor has a notification for (or that are open & within general radius)
+    # Compute initial available requests for donor (ranked by find_best_donors if donor has location)
     available_requests = []
     try:
-        # look up notifications of type REQUEST or NEARBY for this donor and fetch request details
-        notif_rows = Notification.query.filter(Notification.donor_id == d.id, Notification.notif_type.in_(["REQUEST","NEARBY"])).order_by(Notification.created_at.desc()).all()
-        seen_req_ids = set()
-        for n in notif_rows:
-            if not n.request_id:
-                continue
-            # avoid duplicates
-            if n.request_id in seen_req_ids:
-                continue
-            br = BloodRequest.query.get(n.request_id)
-            if not br:
-                continue
-            # only show requests that are OPEN (or maybe ACCEPTED but not assigned to someone else)
-            if br.status == "OPEN":
-                available_requests.append({
-                    "id": br.id,
-                    "patient_name": br.patient_name,
-                    "blood_group": br.required_blood_group,
-                    "latitude": br.latitude,
-                    "longitude": br.longitude,
-                    "created_at": br.created_at,
-                    "distance_msg": n.payload or ""
-                })
-                seen_req_ids.add(br.id)
-    except Exception as e:
-        # don't crash UI on any error — log and continue
-        print("donor_dashboard: nearby list error:", e)
+        if d and d.latitude is not None and d.longitude is not None:
+            ranked = find_best_donors(d.blood_group, d.latitude, d.longitude, max_results=20)
+            for donor_obj, dist, score in ranked:
+                # The find_best_donors returns donors; we actually need request objects.
+                # Instead fetch open requests and compute distance below.
+                pass
+    except Exception:
+        # ignore, will fetch via API on client
+        pass
 
-    return render_template("donor_dashboard.html",
-                           donor=d,
-                           notifications=notifications,
-                           assigned_requests=assigned,
-                           available_requests=available_requests)
+    # We'll let client fetch available requests dynamically via /api/available_requests
+    return render_template(
+        "donor_dashboard.html",
+        donor=d,
+        notifications=notifications,
+        assigned_requests=assigned,
+        available_requests=[],
+    )
+
+# --- New API endpoint: returns nearby OPEN requests with distance to current donor ---
+@app.route("/api/available_requests")
+@donor_login_required
+def api_available_requests():
+    donor = Donor.query.get(session["donor_id"])
+    if not donor or donor.latitude is None or donor.longitude is None:
+        return jsonify([])
+
+    # Fetch open requests and compute distance
+    open_requests = BloodRequest.query.filter(BloodRequest.status == "OPEN").all()
+    out = []
+    for br in open_requests:
+        try:
+            dist = haversine_distance(donor.latitude, donor.longitude, br.latitude, br.longitude)
+        except Exception:
+            dist = None
+        out.append({
+            "id": br.id,
+            "patient_name": br.patient_name,
+            "blood_group": br.required_blood_group,
+            "latitude": br.latitude,
+            "longitude": br.longitude,
+            "created_at": br.created_at.isoformat() if br.created_at else None,
+            "distance_km": round(dist, 3) if dist is not None else None
+        })
+
+    # sort by distance (None last)
+    out_sorted = sorted([o for o in out if o["distance_km"] is not None], key=lambda x: x["distance_km"]) + \
+                 [o for o in out if o["distance_km"] is None]
+    return jsonify(out_sorted)
 
 @app.route("/donor/logout")
 def donor_logout():

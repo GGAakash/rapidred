@@ -9,7 +9,12 @@
       <thead><tr><th>ID</th><th>Patient</th><th>Blood</th><th>Created</th><th>Status</th><th>Accepted Donor</th><th>Action</th></tr></thead>
       <tbody>
         {% for r in requests %}
-          <tr>
+          {# Put hospital coords and request id on the row for easy JS access #}
+          <tr class="request-row"
+              data-request-id="{{ r.id }}"
+              data-hosp-lat="{{ r.latitude or '' }}"
+              data-hosp-lon="{{ r.longitude or '' }}"
+              data-accepted-donor-id="{% if r.accepted %}{{ r.accepted.id if r.accepted.id is defined else r.accepted['id'] }}{% else %}{% endif %}">
             <td>{{ r.id }}</td>
             <td>{{ r.patient_name }}</td>
             <td>{{ r.blood_group }}</td>
@@ -17,7 +22,7 @@
             <td>{{ r.status }}</td>
             <td>
               {% if r.accepted %}
-                {{ r.accepted.name if r.accepted.name is defined else r.accepted['name'] }} 
+                {{ r.accepted.name if r.accepted.name is defined else r.accepted['name'] }}
                 ({{ r.accepted.phone if r.accepted.phone is defined else r.accepted['phone'] }})
               {% else %}
                 -
@@ -29,10 +34,12 @@
                   <button class="btn btn-sm btn-outline-danger">Cancel donor</button>
                 </form>
               {% endif %}
+
               <form method="post" action="{{ url_for('hospital_reassign', request_id=r.id) }}" style="display:inline">
                 <input type="hidden" name="top_k" value="10">
                 <button class="btn btn-sm btn-outline-light">Re-search donors</button>
               </form>
+
               {% if r.accepted %}
                 <form method="post" action="{{ url_for('hospital_mark_reached', request_id=r.id) }}" style="display:inline">
                     <button class="btn btn-sm btn-success">Mark Reached</button>
@@ -43,8 +50,56 @@
                 </form>
               {% endif %}
 
+              {# Track Donor button (only when a donor is assigned) #}
+              {% if r.accepted %}
+                <button
+                  type="button"
+                  class="btn btn-sm btn-info track-donor-btn"
+                  data-donor-id="{{ r.accepted.id if r.accepted.id is defined else r.accepted['id'] }}"
+                  data-request-id="{{ r.id }}"
+                  style="margin-top:6px;">
+                  Track Donor
+                </button>
+              {% endif %}
             </td>
           </tr>
+
+          {# Live panel row right after the main row, hidden by default #}
+          {% if r.accepted %}
+          <tr id="live-panel-row-{{ r.id }}" style="display:none;">
+            <td colspan="7">
+              <div id="live-panel-{{ r.id }}" class="p-2" style="background:#1b1b1b; border-radius:6px; color:#fff;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <strong>Tracking Donor:</strong>
+                    <span id="live-donor-name-{{ r.id }}">{{ r.accepted.name if r.accepted.name is defined else r.accepted['name'] }}</span>
+                    &nbsp;(<span id="live-donor-phone-{{ r.id }}">{{ r.accepted.phone if r.accepted.phone is defined else r.accepted['phone'] }}</span>)
+                  </div>
+                  <div>
+                    <small class="text-muted">Last update: <span id="live-lastseen-{{ r.id }}">N/A</span></small>
+                  </div>
+                </div>
+
+                <div class="mt-2" style="display:flex; gap:12px; align-items:center;">
+                  <div>
+                    <div><small class="text-muted">Last known coordinates</small></div>
+                    <div id="live-loc-{{ r.id }}">N/A</div>
+                  </div>
+
+                  <div>
+                    <div><small class="text-muted">Distance to hospital</small></div>
+                    <div id="live-dist-{{ r.id }}">N/A</div>
+                  </div>
+
+                  <div style="margin-left:auto;">
+                    <a id="live-openmap-{{ r.id }}" class="btn btn-sm btn-outline-light" target="_blank" href="#">Open in Maps</a>
+                    <button type="button" class="btn btn-sm btn-secondary btn-untrack" data-request-id="{{ r.id }}" data-donor-id="{{ r.accepted.id if r.accepted.id is defined else r.accepted['id'] }}">Stop</button>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
         {% endfor %}
       </tbody>
     </table>
@@ -54,13 +109,133 @@
 </div>
 {% endblock %}
 
+
 {% block scripts %}
 {{ super() }}
 <script>
+  // join hospital room for socket updates
   var socket = io();
   socket.emit('join', {room: 'hospitals'});
-  socket.on('request_updated', function(data){ location.reload(); });
-  socket.on('request_accepted', function(data){ location.reload(); });
-  socket.on('request_cancelled', function(data){ location.reload(); });
+
+  // small haversine function
+  function haversine(lat1, lon1, lat2, lon2) {
+    if ([lat1, lon1, lat2, lon2].some(v => v === null || v === undefined || v === '')) return null;
+    function toRad(x){ return x * Math.PI / 180; }
+    var R = 6371; // km
+    var dLat = toRad(lat2 - lat1);
+    var dLon = toRad(lon2 - lon1);
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // Map of donorId -> requestId(s) being tracked
+  window._hospitalTracked = window._hospitalTracked || {};
+
+  // click to toggle track donor
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.track-donor-btn');
+    if(btn){
+      var donorId = btn.getAttribute('data-donor-id');
+      var requestId = btn.getAttribute('data-request-id');
+      var panelRow = document.getElementById('live-panel-row-' + requestId);
+
+      if(!panelRow) return;
+
+      // Toggle display
+      var show = panelRow.style.display === 'none';
+      panelRow.style.display = show ? '' : 'none';
+
+      if(show){
+        // Register tracking
+        if(!window._hospitalTracked[donorId]) window._hospitalTracked[donorId] = new Set();
+        window._hospitalTracked[donorId].add(requestId);
+        // Optionally fetch initial state from server? We'll rely on donor_updated events
+      } else {
+        // Unregister tracking
+        if(window._hospitalTracked[donorId]){
+          window._hospitalTracked[donorId].delete(requestId);
+          if(window._hospitalTracked[donorId].size === 0) delete window._hospitalTracked[donorId];
+        }
+      }
+    }
+
+    var stopBtn = e.target.closest('.btn-untrack');
+    if(stopBtn){
+      var rid = stopBtn.getAttribute('data-request-id');
+      var did = stopBtn.getAttribute('data-donor-id');
+      var panelRow = document.getElementById('live-panel-row-' + rid);
+      if(panelRow) panelRow.style.display = 'none';
+      if(window._hospitalTracked[did]){
+        window._hospitalTracked[did].delete(rid);
+        if(window._hospitalTracked[did].size === 0) delete window._hospitalTracked[did];
+      }
+    }
+  });
+
+  // update function when donor location updates arrive
+  socket.on('donor_updated', function(data){
+    // data: {id, name, blood_group, latitude, longitude, is_online, last_seen}
+    var donorId = String(data.id);
+    if(!window._hospitalTracked || !window._hospitalTracked[donorId]) return;
+
+    // for each request tracking this donor, update its panel
+    window._hospitalTracked[donorId].forEach(function(requestId){
+      // find the row with that requestId and get hospital coords
+      var row = document.querySelector('.request-row[data-request-id="'+requestId+'"]');
+      if(!row) return;
+      var hospLat = parseFloat(row.getAttribute('data-hosp-lat')) || null;
+      var hospLon = parseFloat(row.getAttribute('data-hosp-lon')) || null;
+
+      var locEl = document.getElementById('live-loc-' + requestId);
+      var distEl = document.getElementById('live-dist-' + requestId);
+      var lastSeenEl = document.getElementById('live-lastseen-' + requestId);
+      var openMap = document.getElementById('live-openmap-' + requestId);
+      var donorNameEl = document.getElementById('live-donor-name-' + requestId);
+      var donorPhoneEl = document.getElementById('live-donor-phone-' + requestId);
+
+      if(donorNameEl && data.name) donorNameEl.textContent = data.name;
+      if(donorPhoneEl && data.phone) donorPhoneEl.textContent = data.phone || donorPhoneEl.textContent;
+
+      if(data.latitude != null && data.longitude != null){
+        locEl.textContent = Number(data.latitude).toFixed(6) + ', ' + Number(data.longitude).toFixed(6) + (data.is_online ? ' (online)' : ' (offline)');
+        if(openMap){
+          openMap.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(data.latitude + ',' + data.longitude);
+        }
+        if(hospLat !== null && hospLon !== null){
+          var distance = haversine(hospLat, hospLon, data.latitude, data.longitude);
+          if(distance !== null){
+            distEl.textContent = distance.toFixed(3) + ' km';
+            // highlight if donor very close
+            var panel = document.getElementById('live-panel-' + requestId);
+            if(panel){
+              if(distance <= 0.5){
+                panel.style.border = '2px solid #ff4d4f';
+                panel.style.background = '#3a1f1f';
+              } else {
+                panel.style.border = '';
+                panel.style.background = '#1b1b1b';
+              }
+            }
+          } else {
+            distEl.textContent = 'N/A';
+          }
+        }
+      } else {
+        locEl.textContent = 'N/A';
+      }
+
+      if(lastSeenEl){
+        lastSeenEl.textContent = data.last_seen ? new Date(data.last_seen).toLocaleString() : new Date().toLocaleString();
+      }
+    });
+  });
+
+  // Keep some request-level events in sync with page reloads
+  socket.on('request_updated', function(){ location.reload(); });
+  socket.on('request_accepted', function(){ location.reload(); });
+  socket.on('request_cancelled', function(){ location.reload(); });
 </script>
 {% endblock %}
