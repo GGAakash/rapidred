@@ -4,15 +4,81 @@
 <div class="card p-3">
   <h4>Create Blood Request</h4>
   {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  
   <form method="post">
-    <div class="mb-2"><label class="form-label">Patient Name</label><input name="patient_name" class="form-control" required></div>
-    <div class="mb-2"><label class="form-label">Required Blood Group</label><input name="required_blood_group" class="form-control" placeholder="A+, O-, etc." required></div>
-    <div class="row g-2">
-      <div class="col"><label class="form-label">Latitude</label><input name="latitude" class="form-control" required></div>
-      <div class="col"><label class="form-label">Longitude</label><input name="longitude" class="form-control" required></div>
+
+    <div class="mb-2">
+      <label class="form-label">Patient Name</label>
+      <input name="patient_name" class="form-control" required>
     </div>
-    <div class="mb-2"><label class="form-label">Top K donors to notify</label><input name="top_k" class="form-control" type="number" value="10"></div>
-    <div class="d-grid"><button class="btn btn-danger">Create Request</button></div>
+
+    <div class="mb-2">
+      <label class="form-label">Required Blood Group</label>
+      <input name="required_blood_group" class="form-control" placeholder="A+, O-, etc." required>
+    </div>
+
+    <div class="row g-2">
+      <div class="col">
+        <label class="form-label">Latitude</label>
+        <input id="latitude" name="latitude" class="form-control" required>
+      </div>
+
+      <div class="col">
+        <label class="form-label">Longitude</label>
+        <input id="longitude" name="longitude" class="form-control" required>
+      </div>
+    </div>
+
+    <!-- Auto Location Button -->
+    <button type="button" id="auto_location_btn" class="btn btn-warning mt-2">
+      Get Auto Location 📍
+    </button>
+
+    <div class="mb-2 mt-3">
+      <label class="form-label">Top K donors to notify</label>
+      <input name="top_k" class="form-control" type="number" value="10">
+    </div>
+
+    <div class="d-grid">
+      <button class="btn btn-danger">Create Request</button>
+    </div>
+
   </form>
 </div>
+
+<!-- Auto Location Script -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const latField = document.getElementById("latitude");
+    const lonField = document.getElementById("longitude");
+    const autoBtn = document.getElementById("auto_location_btn");
+
+    autoBtn.addEventListener("click", () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported on this device.");
+            return;
+        }
+
+        autoBtn.innerText = "Getting GPS...";
+        autoBtn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                latField.value = pos.coords.latitude.toFixed(6);
+                lonField.value = pos.coords.longitude.toFixed(6);
+
+                autoBtn.innerText = "Location Set ✔";
+                autoBtn.style.background = "#16c784";
+                autoBtn.disabled = false;
+            },
+            (err) => {
+                console.error(err);
+                alert("Failed to get location. Enable GPS.");
+                autoBtn.innerText = "Get Auto Location 📍";
+                autoBtn.disabled = false;
+            }
+        );
+    });
+});
+</script>
 {% endblock %}
