@@ -1,25 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Login - RapidRed{% endblock %}
+{% block title %}Login{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card p-3">
-      <h4>Hospital / Admin Login</h4>
-      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
-      <form method="post">
-        <div class="mb-2">
-          <label class="form-label">Username</label>
-          <input name="username" class="form-control" required />
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Password</label>
-          <input name="password" class="form-control" type="password" required/>
-        </div>
-        <div class="d-grid">
-          <button class="btn btn-danger">Login</button>
-        </div>
-      </form>
-    </div>
-  </div>
+<div class="card p-3">
+  <h4>Login</h4>
+  {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+  <form method="post">
+    <div class="mb-2"><label class="form-label">Username or Phone</label><input name="identifier" class="form-control" required></div>
+    <div class="mb-2"><label class="form-label">Password</label><input name="password" class="form-control" type="password" required></div>
+    <div class="d-grid"><button class="btn btn-danger">Login</button></div>
+  </form>
+  <div class="mt-3"><a href="{{ url_for('register_donor') }}">Register as donor</a></div>
 </div>
 {% endblock %}

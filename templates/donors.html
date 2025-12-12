@@ -1,26 +1,41 @@
 {% extends "base.html" %}
-{% block title %}Donors{% endblock %}
+{% block title %}Donors Management{% endblock %}
 {% block content %}
 <div class="card p-3">
-  <h4>Donors</h4>
-  <table class="table">
-    <thead><tr><th>Name</th><th>Blood</th><th>Phone</th><th>Location</th></tr></thead>
-    <tbody>
-      {% for d in donors %}
-        <tr>
-          <td>{{ d.name }}</td>
-          <td>{{ d.blood_group }}</td>
-          <td>{{ d.phone }}</td>
-          <td>
-            {% if d.latitude and d.longitude %}
-              {{ "%.5f"|format(d.latitude) }}, {{ "%.5f"|format(d.longitude) }}
-            {% else %}
-              -
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="d-flex justify-content-between align-items-center">
+    <h4>Donors</h4>
+    <form class="d-flex" method="get" action="{{ url_for('donors_list') }}">
+      <input name="q" class="form-control form-control-sm me-2" placeholder="Search name/phone" value="{{ request.args.get('q','') }}">
+      <input name="blood_group" class="form-control form-control-sm me-2" placeholder="Blood group" style="width:120px" value="{{ request.args.get('blood_group','') }}">
+      <button class="btn btn-sm btn-outline-light" type="submit">Filter</button>
+    </form>
+  </div>
+
+  {% if donors %}
+    <table class="table table-dark table-striped mt-3">
+      <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Blood</th><th>Area</th><th>Online</th><th>Last seen</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for d in donors %}
+          <tr>
+            <td>{{ d.id }}</td>
+            <td>{{ d.name }}</td>
+            <td>{{ d.phone }}</td>
+            <td>{{ d.blood_group }}</td>
+            <td>{{ d.residential_area or '-' }}</td>
+            <td>{% if d.is_online %}<span class="badge bg-success">Online</span>{% else %}<span class="badge bg-secondary">Offline</span>{% endif %}</td>
+            <td>{{ d.last_seen.strftime('%Y-%m-%d %H:%M') if d.last_seen else '-' }}</td>
+            <td>
+              <a class="btn btn-sm btn-outline-light" href="{{ url_for('edit_donor', donor_id=d.id) }}">Edit</a>
+              <form method="post" action="{{ url_for('delete_donor', donor_id=d.id) }}" style="display:inline" onsubmit="return confirm('Delete donor?');">
+                <button class="btn btn-sm btn-outline-danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="alert alert-info mt-3">No donors found.</div>
+  {% endif %}
 </div>
 {% endblock %}

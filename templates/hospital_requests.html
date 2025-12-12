@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block title %}My Requests{% endblock %}
+
 {% block content %}
 <div class="card p-3">
   <h4>My Requests</h4>
   {% if requests %}
-    <table class="table">
+    <table class="table table-dark table-striped">
       <thead><tr><th>ID</th><th>Patient</th><th>Blood</th><th>Created</th><th>Status</th><th>Accepted Donor</th><th>Action</th></tr></thead>
       <tbody>
         {% for r in requests %}
@@ -14,11 +15,34 @@
             <td>{{ r.blood_group }}</td>
             <td>{{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '-' }}</td>
             <td>{{ r.status }}</td>
-            <td>{% if r.accepted %}{{ r.accepted.name }} ({{ r.accepted.phone }}){% else %}-{% endif %}</td>
             <td>
-              <form method="post" action="{{ url_for('cancel_request', request_id=r.id) }}" style="display:inline;">
-                <button class="btn btn-sm btn-outline-danger">Cancel</button>
+              {% if r.accepted %}
+                {{ r.accepted.name if r.accepted.name is defined else r.accepted['name'] }} 
+                ({{ r.accepted.phone if r.accepted.phone is defined else r.accepted['phone'] }})
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              {% if r.accepted %}
+                <form method="post" action="{{ url_for('cancel_assignment', request_id=r.id, donor_id=r.accepted.id if r.accepted.id is defined else r.accepted['id']) }}" style="display:inline" onsubmit="return confirm('Cancel this donor assignment?');">
+                  <button class="btn btn-sm btn-outline-danger">Cancel donor</button>
+                </form>
+              {% endif %}
+              <form method="post" action="{{ url_for('hospital_reassign', request_id=r.id) }}" style="display:inline">
+                <input type="hidden" name="top_k" value="10">
+                <button class="btn btn-sm btn-outline-light">Re-search donors</button>
               </form>
+              {% if r.accepted %}
+                <form method="post" action="{{ url_for('hospital_mark_reached', request_id=r.id) }}" style="display:inline">
+                    <button class="btn btn-sm btn-success">Mark Reached</button>
+                </form>
+
+                <form method="post" action="{{ url_for('hospital_mark_completed', request_id=r.id) }}" style="display:inline">
+                    <button class="btn btn-sm btn-primary">Mark Completed</button>
+                </form>
+              {% endif %}
+
             </td>
           </tr>
         {% endfor %}
@@ -28,4 +52,15 @@
     <div class="alert alert-info">No requests yet.</div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  var socket = io();
+  socket.emit('join', {room: 'hospitals'});
+  socket.on('request_updated', function(data){ location.reload(); });
+  socket.on('request_accepted', function(data){ location.reload(); });
+  socket.on('request_cancelled', function(data){ location.reload(); });
+</script>
 {% endblock %}

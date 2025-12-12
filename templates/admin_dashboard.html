@@ -1,18 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Admin Dashboard{% endblock %}
 {% block content %}
-<div class="row">
-  <div class="col-md-3"><div class="card p-3"><h6>Total donors</h6><h3>{{ total_donors }}</h3></div></div>
-  <div class="col-md-3"><div class="card p-3"><h6>Total requests</h6><h3>{{ total_requests }}</h3></div></div>
-  <div class="col-md-3"><div class="card p-3"><h6>Open requests</h6><h3>{{ open_requests }}</h3></div></div>
-  <div class="col-md-3"><div class="card p-3"><h6>Active donors</h6><h3>{{ active_donors }}</h3></div></div>
-</div>
-<div class="mt-3 card p-3">
-  <h5>Recent Requests</h5>
-  <ul>
-    {% for r in recent_requests %}
-      <li>{{ r.patient_name }} - {{ r.required_blood_group }} - {{ r.created_at }}</li>
-    {% endfor %}
-  </ul>
+<div class="card p-3">
+  <h4>Admin Dashboard</h4>
+  <div class="row g-3 mt-2">
+    <div class="col-md-4">
+      <div class="card p-2">
+        <h6>Total donors</h6>
+        <div class="display-6">{{ total_donors }}</div>
+        <a class="btn btn-sm btn-outline-light mt-2" href="{{ url_for('donors_list') }}">Manage donors</a>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-2">
+        <h6>Total requests</h6>
+        <div class="display-6">{{ total_requests }}</div>
+        <a class="btn btn-sm btn-outline-light mt-2" href="{{ url_for('hospital_requests') }}">Request list</a>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card p-2">
+        <h6>Open requests</h6>
+        <div class="display-6">{{ open_requests }}</div>
+        <a class="btn btn-sm btn-outline-light mt-2" href="{{ url_for('admin_map') }}">Map (live)</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <h6>Recent Requests</h6>
+    {% if recent_requests %}
+      <ul class="list-group list-group-flush">
+        {% for r in recent_requests %}
+          <li class="list-group-item bg-dark border-0">
+            #{{ r.id }} — {{ r.patient_name }} ({{ r.required_blood_group }}) • {{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else '-' }} — {{ r.status }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="text-muted">No recent requests</div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
