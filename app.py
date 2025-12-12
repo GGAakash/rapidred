@@ -303,7 +303,43 @@ def donor_dashboard():
     d = Donor.query.get(session["donor_id"])
     notifications = Notification.query.filter_by(donor_id=d.id).order_by(Notification.created_at.desc()).limit(20).all()
     assigned = BloodRequest.query.filter_by(accepted_donor_id=d.id).order_by(BloodRequest.created_at.desc()).all()
-    return render_template("donor_dashboard.html", donor=d, notifications=notifications, assigned_requests=assigned)
+
+    # NEW: gather nearby / open requests that this donor has a notification for (or that are open & within general radius)
+    available_requests = []
+    try:
+        # look up notifications of type REQUEST or NEARBY for this donor and fetch request details
+        notif_rows = Notification.query.filter(Notification.donor_id == d.id, Notification.notif_type.in_(["REQUEST","NEARBY"])).order_by(Notification.created_at.desc()).all()
+        seen_req_ids = set()
+        for n in notif_rows:
+            if not n.request_id:
+                continue
+            # avoid duplicates
+            if n.request_id in seen_req_ids:
+                continue
+            br = BloodRequest.query.get(n.request_id)
+            if not br:
+                continue
+            # only show requests that are OPEN (or maybe ACCEPTED but not assigned to someone else)
+            if br.status == "OPEN":
+                available_requests.append({
+                    "id": br.id,
+                    "patient_name": br.patient_name,
+                    "blood_group": br.required_blood_group,
+                    "latitude": br.latitude,
+                    "longitude": br.longitude,
+                    "created_at": br.created_at,
+                    "distance_msg": n.payload or ""
+                })
+                seen_req_ids.add(br.id)
+    except Exception as e:
+        # don't crash UI on any error — log and continue
+        print("donor_dashboard: nearby list error:", e)
+
+    return render_template("donor_dashboard.html",
+                           donor=d,
+                           notifications=notifications,
+                           assigned_requests=assigned,
+                           available_requests=available_requests)
 
 @app.route("/donor/logout")
 def donor_logout():
