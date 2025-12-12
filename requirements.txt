@@ -6,3 +6,4 @@ python-engineio
 eventlet
 Werkzeug
 twilio
+gunicorn
