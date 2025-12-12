@@ -4,7 +4,6 @@ Flask-SocketIO
 python-socketio
 python-engineio
 eventlet
-Werkzeug
-twilio
 gunicorn
 psycopg2-binary
+twilio

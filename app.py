@@ -2,6 +2,12 @@
 import os
 from datetime import datetime, date
 from functools import wraps
+try:
+    import eventlet
+    eventlet.monkey_patch()
+except Exception:
+    pass
+from sqlalchemy import inspect, text
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -649,35 +655,57 @@ def ensure_admin():
         print("[INIT] Created admin user:", admin_user)
 
 def init_db(reset: bool = False):
-    os.makedirs(os.path.dirname(DB_FILE), exist_ok=True)
-    if reset and os.path.exists(DB_FILE):
-        try:
-            os.remove(DB_FILE)
-            print("[INIT] Removed existing DB file for reset.")
-        except Exception as e:
-            print("[INIT] Failed to remove DB file:", e)
     with app.app_context():
+        # create tables if they don't exist
         db.create_all()
-        # safe migration: add residential_area if missing
-        try:
-            from sqlalchemy import text
-            info = db.session.execute(text("PRAGMA table_info(donor);")).fetchall()
-            cols = [r[1] for r in info] if info else []
-            if 'residential_area' not in cols:
-                try:
-                    db.session.execute(text("ALTER TABLE donor ADD COLUMN residential_area TEXT;"))
-                    print("[MIGRATE] Added donor.residential_area")
-                    db.session.commit()
-                except Exception as e:
-                    print("[MIGRATE] could not add donor.residential_area:", e)
-            else:
-                print("[MIGRATE] donor.residential_area exists")
-        except Exception as e:
-            print("[MIGRATE] PRAGMA/ALTER check failed:", e)
+
+        insp = inspect(db.engine)
+
+        # ---- Donor table migrations (add missing columns if necessary) ----
+        if insp.has_table("donor"):
+            cols = [c["name"] for c in insp.get_columns("donor")]
+            required = {
+                "dob": "DATE",
+                "age": "INTEGER",
+                "weight_kg": "FLOAT",
+                "chronic_conditions": "TEXT",
+                "health_clearance": "BOOLEAN",
+                "consent": "BOOLEAN",
+                "photo": "TEXT",
+                "residential_area": "TEXT"
+            }
+            for col, coltype in required.items():
+                if col not in cols:
+                    try:
+                        db.session.execute(text(f'ALTER TABLE donor ADD COLUMN "{col}" {coltype}'))
+                        print("[MIGRATE] Added donor column:", col)
+                    except Exception as e:
+                        print("[MIGRATE] donor column skip:", col, e)
+
+        # ---- BloodRequest table migrations ----
+        if insp.has_table("blood_request"):
+            cols = [c["name"] for c in insp.get_columns("blood_request")]
+            required = {
+                "accepted_donor_id": "INTEGER",
+                "assigned_at": "TIMESTAMP"
+            }
+            for col, coltype in required.items():
+                if col not in cols:
+                    try:
+                        db.session.execute(text(f'ALTER TABLE blood_request ADD COLUMN "{col}" {coltype}'))
+                        print("[MIGRATE] Added request column:", col)
+                    except Exception as e:
+                        print("[MIGRATE] request column skip:", col, e)
+
+        db.session.commit()
+
+        # ensure admin user exists
         try:
             ensure_admin()
         except Exception as e:
             print("[INIT] ensure_admin failed:", e)
+
+        print("[INIT] Database ready.")
 
 # -----------------------------------------------
 # ONE-TIME INITIALIZATION ROUTE FOR RENDER ONLY
@@ -711,6 +739,8 @@ def init_db_magic():
 
     except Exception as e:
         return f"ERROR: {str(e)}", 500
+    
+
 
 if __name__ == '__main__':
     reset_flag = False
