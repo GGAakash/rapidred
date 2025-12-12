@@ -249,6 +249,54 @@ def register_donor():
         return redirect(url_for("login"))
     return render_template("register_donor.html", error=error)
 
+# hospital registration (self-service)
+@app.route("/register_hospital", methods=["GET", "POST"])
+def register_hospital():
+    error = None
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()              # optional display name
+        username = request.form.get("username", "").strip()
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "").strip()
+        address = request.form.get("address", "").strip()
+
+        if not (username and password):
+            error = "Please provide username and password."
+            return render_template("register_hospital.html", error=error, form=request.form)
+
+        # check if username already used
+        if User.query.filter_by(username=username).first():
+            error = "Username already taken."
+            return render_template("register_hospital.html", error=error, form=request.form)
+
+        # create user with role 'hospital'
+        try:
+            from werkzeug.security import generate_password_hash
+            u = User(
+                username=username,
+                role="hospital",
+                password_hash=generate_password_hash(password)
+            )
+
+            # optional fields if your User model supports them (avoid if not)
+            # If your User model has extra columns, you can set them; otherwise skip.
+            # Example: u.display_name = name
+            # Example: u.phone = phone
+            # Example: u.address = address
+
+            db.session.add(u)
+            db.session.commit()
+            flash("Hospital account created. Please login.", "success")
+            return redirect(url_for("login"))
+        except Exception as e:
+            db.session.rollback()
+            error = f"Failed to create hospital: {str(e)}"
+            return render_template("register_hospital.html", error=error, form=request.form)
+
+    # GET
+    return render_template("register_hospital.html", error=None, form={})
+
+
 @app.route("/donor/dashboard")
 @donor_login_required
 def donor_dashboard():

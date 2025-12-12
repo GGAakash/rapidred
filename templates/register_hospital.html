@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Register Hospital{% endblock %}
+
+{% block content %}
+<div class="card p-4" style="max-width:720px;margin:24px auto;background:#0b1220;color:#e6eef8;">
+  <h3 class="mb-3">Hospital / Clinic Registration</h3>
+
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" class="mb-3">
+    <div class="mb-3">
+      <label class="form-label">Hospital / Clinic Name (optional)</label>
+      <input class="form-control" name="name" value="{{ form.get('name','') }}" placeholder="e.g. City Hospital">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Username</label>
+      <input class="form-control" name="username" value="{{ form.get('username','') }}" required placeholder="Unique username">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Phone (optional)</label>
+      <input class="form-control" name="phone" value="{{ form.get('phone','') }}" placeholder="+91xxxxxxxxxx">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Address (optional)</label>
+      <textarea class="form-control" name="address" rows="2">{{ form.get('address','') }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-control" name="password" required placeholder="Choose a secure password">
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-danger">Register</button>
+      <a class="btn btn-outline-light" href="{{ url_for('login') }}">Back to login</a>
+    </div>
+  </form>
+
+  <div class="text-muted small">After registration, login at the normal login page. If you want me to limit registrations to only admin-created accounts, I can change this.</div>
+</div>
+{% endblock %}
