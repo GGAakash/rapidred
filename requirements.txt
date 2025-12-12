@@ -7,3 +7,4 @@ eventlet
 Werkzeug
 twilio
 gunicorn
+psycopg2-binary
