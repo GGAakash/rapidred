@@ -35,13 +35,28 @@ DB_FILE = os.path.join(DB_DIR, "rapidred.db")
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-key")
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL") or f"sqlite:///{DB_FILE}"
+if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgres://"):
+    app.config["SQLALCHEMY_DATABASE_URI"] = app.config["SQLALCHEMY_DATABASE_URI"].replace(
+        "postgres://", "postgresql://", 1
+    )
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"] = os.path.join(BASE_DIR, "static", "uploads")
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"}
 
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+ASYNC_MODE = "threading"
+
+if os.getenv("RENDER") == "true":
+    ASYNC_MODE = "eventlet"
+
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode=ASYNC_MODE
+)
+
 
 MIN_AGE = 18
 MAX_AGE = 65
@@ -757,9 +772,7 @@ def ensure_admin():
 
 from werkzeug.security import generate_password_hash
 
-
-    
-@app.before_first_request
+   
 def startup_init():
     try:
         with app.app_context():
@@ -768,6 +781,10 @@ def startup_init():
             print("[STARTUP] DB initialized and admin ensured")
     except Exception as e:
         print("[STARTUP ERROR]", e)
+
+# Run startup init immediately (Flask 3 compatible)
+startup_init()
+
 
 
 if __name__ == '__main__':
