@@ -41,7 +41,7 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif"}
 
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
 MIN_AGE = 18
 MAX_AGE = 65
@@ -755,96 +755,21 @@ def ensure_admin():
         db.session.commit()
         print("[INIT] Created admin user:", admin_user)
 
-def init_db(reset: bool = False):
-    with app.app_context():
-        # create tables if they don't exist
-        db.create_all()
-
-        insp = inspect(db.engine)
-
-        # ---- Donor table migrations (add missing columns if necessary) ----
-        if insp.has_table("donor"):
-            cols = [c["name"] for c in insp.get_columns("donor")]
-            required = {
-                "dob": "DATE",
-                "age": "INTEGER",
-                "weight_kg": "FLOAT",
-                "chronic_conditions": "TEXT",
-                "health_clearance": "BOOLEAN",
-                "consent": "BOOLEAN",
-                "photo": "TEXT",
-                "residential_area": "TEXT"
-            }
-            for col, coltype in required.items():
-                if col not in cols:
-                    try:
-                        db.session.execute(text(f'ALTER TABLE donor ADD COLUMN "{col}" {coltype}'))
-                        print("[MIGRATE] Added donor column:", col)
-                    except Exception as e:
-                        print("[MIGRATE] donor column skip:", col, e)
-
-        # ---- BloodRequest table migrations ----
-        if insp.has_table("blood_request"):
-            cols = [c["name"] for c in insp.get_columns("blood_request")]
-            required = {
-                "accepted_donor_id": "INTEGER",
-                "assigned_at": "TIMESTAMP"
-            }
-            for col, coltype in required.items():
-                if col not in cols:
-                    try:
-                        db.session.execute(text(f'ALTER TABLE blood_request ADD COLUMN "{col}" {coltype}'))
-                        print("[MIGRATE] Added request column:", col)
-                    except Exception as e:
-                        print("[MIGRATE] request column skip:", col, e)
-
-        db.session.commit()
-
-        # ensure admin user exists
-        try:
-            ensure_admin()
-        except Exception as e:
-            print("[INIT] ensure_admin failed:", e)
-
-        print("[INIT] Database ready.")
-
-# -----------------------------------------------
-# ONE-TIME INITIALIZATION ROUTE FOR RENDER ONLY
-# -----------------------------------------------
 from werkzeug.security import generate_password_hash
 
-@app.route("/init_db_magic_secret", methods=["GET"])
-def init_db_magic():
-    secret = request.args.get("s")
-    if secret != os.getenv("INIT_SECRET", "macha123"):
-        return "Access Denied", 403
+
     
+@app.before_first_request
+def startup_init():
     try:
         with app.app_context():
             db.create_all()
-
-            # ensure admin user exists
-            admin_user = os.getenv("ADMIN_USER", "admin")
-            admin_pass = os.getenv("ADMIN_PASS", "admin123")
-
-            if not User.query.filter_by(username=admin_user).first():
-                u = User(
-                    username=admin_user,
-                    role="admin",
-                    password_hash=generate_password_hash(admin_pass)
-                )
-                db.session.add(u)
-                db.session.commit()
-
-        return "DB CREATED SUCCESSFULLY, ADMIN READY", 200
-
+            ensure_admin()
+            print("[STARTUP] DB initialized and admin ensured")
     except Exception as e:
-        return f"ERROR: {str(e)}", 500
-    
+        print("[STARTUP ERROR]", e)
 
 
 if __name__ == '__main__':
-    reset_flag = False
-    init_db(reset=reset_flag)
     print("[INFO] Starting RapidRed app...")
     socketio.run(app, host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=True)
